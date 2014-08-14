@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="buildAndDeploy" basedir="..">
+	
+	<!-- deploy porperties from delpoy.properties -->
+	<property file="deploy.properties"></property>
+	
+	<!-- web app files jars -->
+	<fileset dir="lib" id="web_lib_jars">
+		<include name="**/*.jar" />
+		<exclude name="servlet-api.jar" />
+	</fileset>
+
+	<echo message="basedir: ${basedir}" />
+	
+	<!-- prepare runtime environment -->
+	<target name="devtimeReady">
+		<copy todir="WebContent/WEB-INF/lib" preservelastmodified="true" verbose="true">
+			<mapper type="flatten" />
+			<fileset refid="web_lib_jars" />
+		</copy>
+	</target>
+
+</project>
