@@ -1,33 +1,40 @@
 package com.ck.core.socket;
 
-import java.io.DataInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.log4j.Logger;
 
 import com.ck.dao.IPropertyConifg;
 import com.ck.dao.confImpl.PropertiesConfig;
 
-public class ServiceThread{
+public class PosService{
+	
+	private PosService(){
+		
+	}
+	/**
+	 * 
+	 */
+	private static final Logger logger = Logger.getLogger(PosService.class);
 	
 	/**
 	 * 
 	 */
-	private static ServiceThread instance = null;
+	private ExecutorService servicePool;//线程池
 	
-	private static final Logger logger = Logger.getLogger(ServiceThread.class);
+	private static PosService instance = null;
 	
 	/**
 	 * 
 	 * @return
 	 */
-	public static synchronized ServiceThread getInstance(){
+	public static synchronized PosService getInstance(){
 		if(instance == null){
-			instance = new ServiceThread();
+			instance = new PosService();
 		}
 		return instance;
 	}
@@ -52,9 +59,11 @@ public class ServiceThread{
 	 */
 	private ServerSocket init(IPropertyConifg conf) {
 		int port = conf.getConfigAsInt("sys.pos.server.port", 36010);
+		int nThreads = conf.getConfigAsInt("sys.pos.server.pool.num", 10);
 		ServerSocket server = null;
 		try {
 			server = new ServerSocket(port);
+			servicePool = Executors.newFixedThreadPool(nThreads);
 		} catch (IOException e) {
 			logger.error("init socket connect failed !", e);
 		}
@@ -72,20 +81,17 @@ public class ServiceThread{
 				// 一旦有堵塞, 则表示服务器与客户端获得了连接  
 				socket = server.accept();
 				// 启动独立的线程处理本次连接
+				servicePool.execute(new ReceiverHandler(socket));
 			} catch (Exception e) {
 				logger.error("failed to deal ", e);
 			}finally{
-				try {
-					socket.close();
-				} catch (IOException e) {
-					logger.error("failed to colse socket !", e);
-				}
+				servicePool.shutdown();
 			}
 		}
 	}
 
 	public static void main(String[] args) {
-	/*	Thread t = new Thread(new ServiceThread());
-		t.start();*/
+		PosService t = PosService.getInstance();
+		t.start();
 	}
 }
